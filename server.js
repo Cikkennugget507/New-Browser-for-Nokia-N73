@@ -4,39 +4,100 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Homepage (browser UI)
+let history = [];
+
+// HOME (browser UI)
 app.get("/", (req, res) => {
+  const currentUrl = req.query.url || "";
+
   res.send(`
-    <html>
-      <head>
-        <title>Nokia Browser</title>
-        <style>
-          body { font-family: Arial; text-align: center; padding: 20px; }
-          input { width: 60%; padding: 10px; }
-          button { padding: 10px 20px; }
-        </style>
-      </head>
-      <body>
-        <h2>Nokia Browser</h2>
-        <form action="/browse" method="GET">
-          <input type="text" name="url" placeholder="Scrivi google.com" />
-          <button type="submit">Vai</button>
-        </form>
-      </body>
-    </html>
+  <html>
+  <head>
+    <title>Nokia Browser</title>
+    <style>
+      body { font-family: Arial; margin:0; }
+      .bar {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        background: #222;
+        padding: 10px;
+        display: flex;
+        gap: 5px;
+      }
+      input {
+        width: 60%;
+        padding: 8px;
+      }
+      button {
+        padding: 8px 12px;
+      }
+      iframe {
+        position: absolute;
+        top: 60px;
+        width: 100%;
+        height: calc(100% - 60px);
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="bar">
+      <button onclick="back()">⬅</button>
+      <button onclick="forward()">➡</button>
+
+      <form id="form" style="display:flex; gap:5px; width:100%;">
+        <input id="url" value="${currentUrl}" placeholder="scrivi google.com" />
+        <button type="submit">Vai</button>
+      </form>
+    </div>
+
+    <iframe id="frame" src="${currentUrl ? '/browse?url=' + encodeURIComponent(currentUrl) : ''}"></iframe>
+
+    <script>
+      const form = document.getElementById("form");
+      const input = document.getElementById("url");
+      const frame = document.getElementById("frame");
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        let url = input.value;
+
+        if (!url.startsWith("http")) {
+          url = "https://" + url;
+        }
+
+        window.location.href = "/?url=" + encodeURIComponent(url);
+      };
+
+      function back() {
+        history.back();
+      }
+
+      function forward() {
+        history.forward();
+      }
+    </script>
+
+  </body>
+  </html>
   `);
 });
 
-// Proxy
+// PROXY
 app.get("/browse", async (req, res) => {
   try {
     let url = req.query.url;
 
     if (!url) return res.send("URL mancante");
 
-    // aggiunge protocollo se manca
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = "https://" + url;
+    }
+
+    if (!history.includes(url)) {
+      history.push(url);
     }
 
     const response = await axios.get(url, {
@@ -47,10 +108,10 @@ app.get("/browse", async (req, res) => {
 
     let html = response.data;
 
-    // riscrive link
+    // riscrittura link
     html = html.replace(/href="(.*?)"/g, (match, p1) => {
       if (p1.startsWith("http")) {
-        return `href="/browse?url=${encodeURIComponent(p1)}"`;
+        return `href="/?url=${encodeURIComponent(p1)}"`;
       }
       return match;
     });
@@ -59,7 +120,7 @@ app.get("/browse", async (req, res) => {
 
   } catch (err) {
     console.log(err.message);
-    res.send("Errore nel caricamento pagina");
+    res.send("Errore caricamento pagina");
   }
 });
 
