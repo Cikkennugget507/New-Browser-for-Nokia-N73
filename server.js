@@ -4,9 +4,7 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let history = [];
-
-// HOME (browser UI)
+// HOME
 app.get("/", (req, res) => {
   const currentUrl = req.query.url || "";
 
@@ -26,7 +24,7 @@ app.get("/", (req, res) => {
         gap: 5px;
       }
       input {
-        width: 60%;
+        width: 70%;
         padding: 8px;
       }
       button {
@@ -44,11 +42,8 @@ app.get("/", (req, res) => {
   <body>
 
     <div class="bar">
-      <button onclick="back()">⬅</button>
-      <button onclick="forward()">➡</button>
-
       <form id="form" style="display:flex; gap:5px; width:100%;">
-        <input id="url" value="${currentUrl}" placeholder="scrivi google.com" />
+        <input id="url" value="${currentUrl}" placeholder="scrivi sito o ricerca" />
         <button type="submit">Vai</button>
       </form>
     </div>
@@ -58,26 +53,26 @@ app.get("/", (req, res) => {
     <script>
       const form = document.getElementById("form");
       const input = document.getElementById("url");
-      const frame = document.getElementById("frame");
 
       form.onsubmit = (e) => {
         e.preventDefault();
-        let url = input.value;
 
-        if (!url.startsWith("http")) {
-          url = "https://" + url;
+        let value = input.value.trim();
+
+        // se è una ricerca (parole o senza punto)
+        if (!value.includes(".") || value.includes(" ")) {
+          const searchUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(value);
+          window.location.href = "/?url=" + encodeURIComponent(searchUrl);
+          return;
         }
 
-        window.location.href = "/?url=" + encodeURIComponent(url);
+        // se manca protocollo
+        if (!value.startsWith("http")) {
+          value = "https://" + value;
+        }
+
+        window.location.href = "/?url=" + encodeURIComponent(value);
       };
-
-      function back() {
-        history.back();
-      }
-
-      function forward() {
-        history.forward();
-      }
     </script>
 
   </body>
@@ -92,12 +87,9 @@ app.get("/browse", async (req, res) => {
 
     if (!url) return res.send("URL mancante");
 
+    // aggiunge protocollo se manca
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = "https://" + url;
-    }
-
-    if (!history.includes(url)) {
-      history.push(url);
     }
 
     const response = await axios.get(url, {
@@ -120,7 +112,7 @@ app.get("/browse", async (req, res) => {
 
   } catch (err) {
     console.log(err.message);
-    res.send("Errore caricamento pagina");
+    res.send("Errore nel caricamento pagina");
   }
 });
 
