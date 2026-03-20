@@ -4,7 +4,9 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// HOME
+/* =========================
+   HOME (BROWSER MODERNO)
+========================= */
 app.get("/", (req, res) => {
   const currentUrl = req.query.url || "";
 
@@ -91,37 +93,35 @@ app.get("/", (req, res) => {
     <script>
       const form = document.getElementById("form");
       const input = document.getElementById("url");
+      const iframe = document.getElementById("frame");
 
       form.onsubmit = (e) => {
         e.preventDefault();
 
         let value = input.value.trim();
 
-        // SE È UNA RICERCA → DuckDuckGo diretto (NO proxy)
         const isSearch = !value.includes(".");
 
+        // 🔍 ricerca dentro iframe
         if (isSearch) {
           const searchUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(value);
-          window.location.href = searchUrl;
+          iframe.src = "/browse?url=" + encodeURIComponent(searchUrl);
           return;
         }
 
-        // aggiungi https se manca
         if (!value.startsWith("http")) {
           value = "https://" + value;
         }
 
-        // siti complessi → apertura diretta
         const complexSites = ["youtube.com", "google.com", "youtu.be"];
         let isComplex = complexSites.some(site => value.includes(site));
 
         if (isComplex) {
-          window.location.href = value;
+          iframe.src = value;
           return;
         }
 
-        // proxy normale
-        window.location.href = "/?url=" + encodeURIComponent(value);
+        iframe.src = "/browse?url=" + encodeURIComponent(value);
       };
     </script>
 
@@ -130,7 +130,10 @@ app.get("/", (req, res) => {
   `);
 });
 
-// PROXY
+
+/* =========================
+   PROXY
+========================= */
 app.get("/browse", async (req, res) => {
   try {
     let url = req.query.url;
@@ -149,7 +152,6 @@ app.get("/browse", async (req, res) => {
 
     let html = response.data;
 
-    // riscrittura link
     html = html.replace(/href="(.*?)"/g, (match, p1) => {
       if (p1.startsWith("http")) {
         return `href="/?url=${encodeURIComponent(p1)}"`;
@@ -165,6 +167,49 @@ app.get("/browse", async (req, res) => {
   }
 });
 
+
+/* =========================
+   VERSIONE NOKIA N73 (LITE)
+========================= */
+app.get("/lite", (req, res) => {
+  const url = req.query.url || "https://duckduckgo.com";
+
+  res.send(`
+  <html>
+  <head>
+    <title>Nokia N73 Browser</title>
+  </head>
+  <body style="font-family: Arial; font-size:16px;">
+
+    <h2>📟 Nokia Browser Lite</h2>
+
+    <form action="/lite" method="GET">
+      <input type="text" name="url" value="${url}" style="width:100%; padding:8px;" />
+      <button type="submit">Vai</button>
+    </form>
+
+    <hr>
+
+    <p>
+      <a href="/lite?url=https://duckduckgo.com">DuckDuckGo</a><br><br>
+      <a href="/lite?url=https://google.com">Google</a><br><br>
+      <a href="/lite?url=https://youtube.com">YouTube</a>
+    </p>
+
+    <hr>
+
+    <p>URL attuale:</p>
+    <p>${url}</p>
+
+  </body>
+  </html>
+  `);
+});
+
+
+/* =========================
+   START SERVER
+========================= */
 app.listen(PORT, () => {
   console.log("Server attivo su porta " + PORT);
 });
