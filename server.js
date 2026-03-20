@@ -11,39 +11,76 @@ app.get("/", (req, res) => {
   res.send(`
   <html>
   <head>
-    <title>Nokia Browser</title>
+    <title>Browser Nokia 2026</title>
     <style>
-      body { font-family: Arial; margin:0; }
+      body {
+        margin: 0;
+        font-family: Arial;
+        background: #111;
+        color: white;
+      }
+
+      .top {
+        text-align: center;
+        padding: 20px;
+        font-size: 22px;
+        font-weight: bold;
+        background: #000;
+        border-bottom: 1px solid #333;
+      }
+
       .bar {
         position: fixed;
-        top: 0;
+        top: 70px;
         width: 100%;
         background: #222;
         padding: 10px;
         display: flex;
         gap: 5px;
       }
+
       input {
         width: 70%;
-        padding: 8px;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
       }
+
       button {
-        padding: 8px 12px;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background: #4CAF50;
+        color: white;
+        cursor: pointer;
       }
+
       iframe {
         position: absolute;
-        top: 60px;
+        top: 130px;
         width: 100%;
-        height: calc(100% - 60px);
+        height: calc(100% - 130px);
         border: none;
+      }
+
+      .hint {
+        text-align: center;
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 5px;
       }
     </style>
   </head>
   <body>
 
+    <div class="top">
+      📟 Browser Nokia 2026
+      <div class="hint">Scrivi un sito o una ricerca</div>
+    </div>
+
     <div class="bar">
       <form id="form" style="display:flex; gap:5px; width:100%;">
-        <input id="url" value="${currentUrl}" placeholder="scrivi sito o ricerca" />
+        <input id="url" value="${currentUrl}" placeholder="es: google.com oppure minecraft" />
         <button type="submit">Vai</button>
       </form>
     </div>
@@ -59,18 +96,28 @@ app.get("/", (req, res) => {
 
         let value = input.value.trim();
 
-        // se è una ricerca (parole o senza punto)
+        const complexSites = ["youtube.com", "youtu.be", "google.com"];
+        let isComplex = complexSites.some(site => value.includes(site));
+
+        // ricerca
         if (!value.includes(".") || value.includes(" ")) {
           const searchUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(value);
           window.location.href = "/?url=" + encodeURIComponent(searchUrl);
           return;
         }
 
-        // se manca protocollo
+        // aggiungi https se manca
         if (!value.startsWith("http")) {
           value = "https://" + value;
         }
 
+        // siti complessi → apertura diretta
+        if (isComplex) {
+          window.location.href = value;
+          return;
+        }
+
+        // proxy normale
         window.location.href = "/?url=" + encodeURIComponent(value);
       };
     </script>
@@ -87,7 +134,6 @@ app.get("/browse", async (req, res) => {
 
     if (!url) return res.send("URL mancante");
 
-    // aggiunge protocollo se manca
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = "https://" + url;
     }
