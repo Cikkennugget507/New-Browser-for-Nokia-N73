@@ -37,6 +37,7 @@ app.get("/", (req, res) => {
         padding: 10px;
         display: flex;
         gap: 5px;
+        z-index: 10;
       }
 
       input {
@@ -96,13 +97,12 @@ app.get("/", (req, res) => {
 
         let value = input.value.trim();
 
-        const complexSites = ["youtube.com", "youtu.be", "google.com"];
-        let isComplex = complexSites.some(site => value.includes(site));
+        // SE È UNA RICERCA → DuckDuckGo diretto (NO proxy)
+        const isSearch = !value.includes(".");
 
-        // ricerca
-        if (!value.includes(".") || value.includes(" ")) {
+        if (isSearch) {
           const searchUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(value);
-          window.location.href = "/?url=" + encodeURIComponent(searchUrl);
+          window.location.href = searchUrl;
           return;
         }
 
@@ -112,6 +112,9 @@ app.get("/", (req, res) => {
         }
 
         // siti complessi → apertura diretta
+        const complexSites = ["youtube.com", "google.com", "youtu.be"];
+        let isComplex = complexSites.some(site => value.includes(site));
+
         if (isComplex) {
           window.location.href = value;
           return;
