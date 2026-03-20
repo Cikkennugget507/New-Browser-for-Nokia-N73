@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* =========================
-   HOME (BROWSER MODERNO)
+   HOME
 ========================= */
 app.get("/", (req, res) => {
   const currentUrl = req.query.url || "";
@@ -24,8 +24,8 @@ app.get("/", (req, res) => {
 
       .top {
         text-align: center;
-        padding: 20px;
-        font-size: 22px;
+        padding: 15px;
+        font-size: 20px;
         font-weight: bold;
         background: #000;
         border-bottom: 1px solid #333;
@@ -33,24 +33,25 @@ app.get("/", (req, res) => {
 
       .bar {
         position: fixed;
-        top: 70px;
+        top: 60px;
         width: 100%;
         background: #222;
         padding: 10px;
         display: flex;
         gap: 5px;
         z-index: 10;
+        align-items: center;
       }
 
       input {
-        width: 70%;
-        padding: 10px;
+        width: 50%;
+        padding: 8px;
         border: none;
         border-radius: 5px;
       }
 
       button {
-        padding: 10px;
+        padding: 8px;
         border: none;
         border-radius: 5px;
         background: #4CAF50;
@@ -58,11 +59,15 @@ app.get("/", (req, res) => {
         cursor: pointer;
       }
 
+      .navbtn {
+        background: #555;
+      }
+
       iframe {
         position: absolute;
-        top: 130px;
+        top: 110px;
         width: 100%;
-        height: calc(100% - 130px);
+        height: calc(100% - 110px);
         border: none;
       }
 
@@ -70,7 +75,6 @@ app.get("/", (req, res) => {
         text-align: center;
         font-size: 12px;
         color: #aaa;
-        margin-top: 5px;
       }
     </style>
   </head>
@@ -78,12 +82,16 @@ app.get("/", (req, res) => {
 
     <div class="top">
       📟 Browser Nokia 2026
-      <div class="hint">Scrivi un sito o una ricerca</div>
+      <div class="hint">Ricerca + Navigazione</div>
     </div>
 
     <div class="bar">
+      <button class="navbtn" onclick="goBack()">⬅</button>
+      <button class="navbtn" onclick="goForward()">➡</button>
+      <button class="navbtn" onclick="refreshPage()">🔄</button>
+
       <form id="form" style="display:flex; gap:5px; width:100%;">
-        <input id="url" value="${currentUrl}" placeholder="es: google.com oppure minecraft" />
+        <input id="url" value="${currentUrl}" placeholder="es: google.com o ricerca..." />
         <button type="submit">Vai</button>
       </form>
     </div>
@@ -95,34 +103,67 @@ app.get("/", (req, res) => {
       const input = document.getElementById("url");
       const iframe = document.getElementById("frame");
 
+      let historyStack = [];
+      let currentIndex = -1;
+
+      function loadUrl(url) {
+        iframe.src = url;
+        input.value = url;
+      }
+
       form.onsubmit = (e) => {
         e.preventDefault();
 
         let value = input.value.trim();
-
         const isSearch = !value.includes(".");
 
-        // 🔍 ricerca dentro iframe
+        let finalUrl = "";
+
         if (isSearch) {
-          const searchUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(value);
-          iframe.src = "/browse?url=" + encodeURIComponent(searchUrl);
-          return;
+          finalUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(value);
+        } else {
+          if (!value.startsWith("http")) {
+            value = "https://" + value;
+          }
+
+          const complexSites = ["youtube.com", "google.com", "youtu.be"];
+          let isComplex = complexSites.some(site => value.includes(site));
+
+          finalUrl = isComplex ? value : "/browse?url=" + encodeURIComponent(value);
         }
 
-        if (!value.startsWith("http")) {
-          value = "https://" + value;
-        }
+        historyStack.push(finalUrl);
+        currentIndex++;
 
-        const complexSites = ["youtube.com", "google.com", "youtu.be"];
-        let isComplex = complexSites.some(site => value.includes(site));
-
-        if (isComplex) {
-          iframe.src = value;
-          return;
-        }
-
-        iframe.src = "/browse?url=" + encodeURIComponent(value);
+        iframe.src = finalUrl;
       };
+
+      function goBack() {
+        if (currentIndex > 0) {
+          currentIndex--;
+          iframe.src = historyStack[currentIndex];
+          input.value = historyStack[currentIndex];
+        }
+      }
+
+      function goForward() {
+        if (currentIndex < historyStack.length - 1) {
+          currentIndex++;
+          iframe.src = historyStack[currentIndex];
+          input.value = historyStack[currentIndex];
+        }
+      }
+
+      function refreshPage() {
+        iframe.src = iframe.src;
+      }
+
+      // aggiorna input quando cambia pagina
+      iframe.addEventListener("load", () => {
+        try {
+          input.value = iframe.src;
+        } catch (e) {}
+      });
     </script>
 
   </body>
@@ -152,6 +193,7 @@ app.get("/browse", async (req, res) => {
 
     let html = response.data;
 
+    // riscrittura link
     html = html.replace(/href="(.*?)"/g, (match, p1) => {
       if (p1.startsWith("http")) {
         return `href="/?url=${encodeURIComponent(p1)}"`;
@@ -165,45 +207,6 @@ app.get("/browse", async (req, res) => {
     console.log(err.message);
     res.send("Errore nel caricamento pagina");
   }
-});
-
-
-/* =========================
-   VERSIONE NOKIA N73 (LITE)
-========================= */
-app.get("/lite", (req, res) => {
-  const url = req.query.url || "https://duckduckgo.com";
-
-  res.send(`
-  <html>
-  <head>
-    <title>Nokia N73 Browser</title>
-  </head>
-  <body style="font-family: Arial; font-size:16px;">
-
-    <h2>📟 Nokia Browser Lite</h2>
-
-    <form action="/lite" method="GET">
-      <input type="text" name="url" value="${url}" style="width:100%; padding:8px;" />
-      <button type="submit">Vai</button>
-    </form>
-
-    <hr>
-
-    <p>
-      <a href="/lite?url=https://duckduckgo.com">DuckDuckGo</a><br><br>
-      <a href="/lite?url=https://google.com">Google</a><br><br>
-      <a href="/lite?url=https://youtube.com">YouTube</a>
-    </p>
-
-    <hr>
-
-    <p>URL attuale:</p>
-    <p>${url}</p>
-
-  </body>
-  </html>
-  `);
 });
 
 
